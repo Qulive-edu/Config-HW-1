@@ -4,6 +4,6 @@ computer = "admin"
 parameter= "test"
 
 [paths]
-vfs= "test.zip"
+vfs = "test.zip"
 log = "log.xml"
 start_script = "start.sh"

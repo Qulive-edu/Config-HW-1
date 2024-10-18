@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from datetime import datetime
 import toml
+import sys
 
 class ShellEmulator:
     def __init__(self, config_path):
@@ -16,7 +17,8 @@ class ShellEmulator:
         self.log_file = self.config["paths"]["log"]
         self.start_script = self.config["paths"]["start_script"]
         self.parameter = self.config["user"]["parameter"]
-        self.current_path = "/"
+        self.current_path = ""
+        self.previous_path = ""
         self.vfs = {}
         self.load_vfs()
         self.create_log_file()
@@ -38,7 +40,10 @@ class ShellEmulator:
         """
         with zipfile.ZipFile (self.fs_zip_path, "r") as zip_ref:
             for file in zip_ref.namelist():
-                normalized_path = os.path.join("/", file)
+                if file.endswith("/"):
+                    normalized_path = os.path.join("/", file[:-1])
+                else:
+                    normalized_path = os.path.join("/", file)
                 try:
                     self.vfs[normalized_path] = zip_ref.read(file).decode("UTF-8")
                 except UnicodeDecodeError:
@@ -68,6 +73,12 @@ class ShellEmulator:
         
 
     def cd (self, path):
+        if (path.startswith("/")):
+            self.current_path = ""
+            if path == "/":
+                return
+            path = path[1:]
+        path = self.current_path + "/" + path
         if path in self.vfs:
             self.current_path = path
         else:
@@ -95,11 +106,23 @@ class ShellEmulator:
         
         
     def head(self, file_path):
-        file_location = self.current_path + file_path
+        if file_path.startswith("/"):
+            file_location = file_path
+        else:
+            file_location = self.current_path + "/" + file_path
         if file_location in self.vfs:
-            with open(file_location, "r") as f:
-                head = [head(f) for i in range(10)]
-            print(head)
+            data = str(zipfile.ZipFile(self.fs_zip_path, 'r').read(file_location[1:]))
+            """with open(data) as f:
+                headR = [next(f) for i in range(10)] """
+            arr = data[2:-2].split('\\n')[:-1]
+            #print(data + "\n") #head test/1/A Fool Moon Night.txt
+            #print(arr)
+            if len(arr) < 10:
+                for i in range(len(arr)):
+                    print(arr[i])
+            else:
+                for i in range(10):
+                    print(arr[i])
         else:
             print(f"No such file in directory: {file_location}")
                 
@@ -132,7 +155,7 @@ class ShellEmulator:
             self.exit_shell()
         elif command == "whoami":
             self.whoami()
-        elif command == "head ":
+        elif command.startswith("head "):
             self.head(command[5:])
         else:
             print(f"Command not found: {command}")
@@ -145,12 +168,12 @@ class ShellEmulator:
             self.execute(command)
 
 if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) != 2:
-        print("Usage: python shell_emulator.py <config.toml>")
-        sys.exit(1)
-
-    config_path = sys.argv[1]
-    shell = ShellEmulator(config_path)
+    shell = ShellEmulator("config.toml")
     shell.run()
+    
+
+    ''' if len(sys.argv) != 2:
+        print("Usage: python shell_emulator.py <config.toml>")
+        sys.exit(1) 
+
+    config_path = sys.argv[1]'''
