@@ -7,9 +7,6 @@ import sys
 
 class ShellEmulator:
     def __init__(self, config_path):
-        """
-        Initializing all required data for proper work
-        """
         self.config = self.load_config(config_path)
         self.username = self.config["user"]["name"]
         self.computer_name = self.config["user"]["computer"]
@@ -26,18 +23,11 @@ class ShellEmulator:
         
         
     def load_config (self, config_path: str) -> dict:
-        
-        #Loads the configuration from the given file path.
-        
         with open(config_path, "r") as f:
             return toml.load(f)
         
         
     def load_vfs (self):
-        """
-        Loading virtual file system from zip file at the given path.
-        Trying to decode it as UTF-8. If cannot, then read it as binary.
-        """
         with zipfile.ZipFile (self.fs_zip_path, "r") as zip_ref:
             for file in zip_ref.namelist():
                 if file.endswith("/"):
@@ -81,8 +71,9 @@ class ShellEmulator:
         path = self.current_path + "/" + path
         if path in self.vfs:
             self.current_path = path
+            return
         else:
-            print(f"No such directory: {path}")
+            return (f"No such directory: {path}")
             
             
     def ls(self):
@@ -98,40 +89,39 @@ class ShellEmulator:
                 sub_path = file[len(path_prefix):].split("/")[0]
                 contents.add(sub_path)
                 
-        print("\n".join(sorted(contents)))
+        return ("\n".join(sorted(contents)))
         
     
     def whoami(self):
-        print(self.username)
+        return(self.username)
         
         
     def head(self, file_path):
+        stri = ""
         if file_path.startswith("/"):
             file_location = file_path
         else:
             file_location = self.current_path + "/" + file_path
         if file_location in self.vfs:
             data = str(zipfile.ZipFile(self.fs_zip_path, 'r').read(file_location[1:]))
-            """with open(data) as f:
-                headR = [next(f) for i in range(10)] """
             arr = data[2:-2].split('\\n')[:-1]
-            #print(data + "\n") #head test/1/A Fool Moon Night.txt
-            #print(arr)
             if len(arr) < 10:
-                for i in range(len(arr)):
-                    print(arr[i])
+                for i in range(len(arr)-1):
+                    stri = stri + arr[i] + "\n"
+                stri = stri + arr[len(arr)-1]
             else:
-                for i in range(10):
-                    print(arr[i])
+                for i in range(9):
+                    stri = stri + arr[i] + "\n"
+                stri = stri + arr[9]
+            return stri;
         else:
-            print(f"No such file in directory: {file_location}")
+            return (f"No such file in directory: {file_location}")
                 
     
     def exit_shell(self):
         self.log_action("session_end")
         self.save_log()
-        print("Exiting...")
-        exit()
+        return("Exiting...")
         
     
     def run_start_script(self):
@@ -148,15 +138,16 @@ class ShellEmulator:
     
     def execute(self, command):
         if command.startswith("cd "):
-            self.cd(command[3:])
+            (self.cd(command[3:]))
         elif command == "ls":
-            self.ls()
+            print(self.ls())
         elif command == "exit":
-            self.exit_shell()
+            print(self.exit_shell())
+            exit()
         elif command == "whoami":
-            self.whoami()
+            print(self.whoami())
         elif command.startswith("head "):
-            self.head(command[5:])
+            print(self.head(command[5:]))
         else:
             print(f"Command not found: {command}")
         self.log_action(command)                 
@@ -170,10 +161,3 @@ class ShellEmulator:
 if __name__ == "__main__":
     shell = ShellEmulator("config.toml")
     shell.run()
-    
-
-    ''' if len(sys.argv) != 2:
-        print("Usage: python shell_emulator.py <config.toml>")
-        sys.exit(1) 
-
-    config_path = sys.argv[1]'''
